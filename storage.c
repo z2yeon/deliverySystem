@@ -53,6 +53,7 @@ static void printStorageInside(int x, int y) {
 static void initStorage(int x, int y) {
 	
 	deliverySystem[x][y].cnt = 0;
+	printf(" -----------> extracting the storage (%d, %d)...", x, y);
 	
 }
 
@@ -62,10 +63,10 @@ static void initStorage(int x, int y) {
 static int inputPasswd(int x, int y) {
 	
 	int result;
-	char input_password[];	//password that user inputted
+	char input_password[4];	//password that user inputted
 	
 	printf("-input the password of storage (%i, %i): ", x, y);
-	scanf("%4s", &input_password[]);
+	scanf("%4s", &input_password);
 	
 	result=strcmp(input_password, deliverySystem[x][y].passwd);	//compare the passwords
 	
@@ -129,6 +130,8 @@ int str_backupSystem(char* filepath) {
 //return : 0 - successfully created, -1 - failed to create the system
 int str_createSystem(char* filepath) {
 	int i, j;
+	int x, y;	//input row, column
+	char c;
 	FILE *fp;
 	
 	fp = fopen(STORAGE_FILEPATH, "r");
@@ -138,21 +141,40 @@ int str_createSystem(char* filepath) {
 	
 	//read config parameters
 	fscanf(fp, "%d %d", &systemSize[0], &systemSize[1]);	//read row, column
-	fscanf(fp, "%s", &masterPassword);	//read master password
+	fscanf(fp, "%s", masterPassword);	//read master password
 	
-	deliverySystem = (storage_t **)malloc(systemSize[0] * sizeof(storage_t*));
-
+	//allocate memory to delivery System 
+	deliverySystem = (storage_t **)malloc(systemSize[0] * sizeof(storage_t*));	//row
+	for(i=0;i<systemSize[0];i++)
+		deliverySystem[i] = (storage_t **)malloc(systemSize[1] * sizeof(storage_t*));	//column
 	
 	for(i=0;i<systemSize[0];i++)
-		delieverySystem = (storage_t **)malloc(sizeof(storage_t*));
+	{
+		for(j=0;j<systemSize[1];j++)
+		{
+			deliverySystem[i][j].context = (char *)malloc(100 * sizeof(char));	//context
+		}
+	}
 	
 	//cnt initializing
 	for(i=0;i<systemSize[0];i++)
 	{
 		for(j=0;j<systemSize[1];j++)
 		{
-			delieverySystem[i][j].cnt = 0;
+			deliverySystem[i][j].cnt = 0;
 		}
+	}
+	
+	//read past contexts of the delivery system
+	while((c = fgetc(fp)) != EOF)
+	{	
+		//row, column, building, room
+		fscanf(fp, "%d %d %d %d", &x, &y, &deliverySystem[x][y].building, &deliverySystem[x][y].room); 
+		// passwd, context
+		fscanf(fp, "%s %s", deliverySystem[x][y].passwd, deliverySystem[x][y].context);
+
+		deliverySystem[x][y].cnt = 1;
+		storedCnt++;
 	}
 	
 	fclose(fp);
@@ -160,6 +182,11 @@ int str_createSystem(char* filepath) {
 
 //free the memory of the deliverySystem 
 void str_freeSystem(void) {
+	int i;
+	
+	for(i=0;i<systemSize[0];i++)
+		free(deliverySystem[i]);		
+	free(deliverySystem);
 	
 }
 
@@ -233,8 +260,19 @@ int str_pushToStorage(int x, int y, int nBuilding, int nRoom, char msg[MAX_MSG_S
 //return : 0 - successfully extracted, -1 = failed to extract
 int str_extractStorage(int x, int y) {
 	
+	if (inputPasswd(x, y) == 0)
+	{
+		initStorage(x, y);
+		storedCnt--;
+		
+		return 0;
+	}
 	
-	printf(" -----------> extracting the storage (%d, %d)...", x, y);
+	if (inputPasswd(x,y) != 0)
+	{
+		return -1;
+	}
+	
 }
 
 //find my package from the storage
