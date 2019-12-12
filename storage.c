@@ -52,8 +52,12 @@ static void printStorageInside(int x, int y) {
 static void initStorage(int x, int y) {
 	
 	//storage initializing
+	deliverySystem[x][y].building = 0;
+	deliverySystem[x][y].room = 0;
 	deliverySystem[x][y].cnt = 0;
-	
+	strcpy(deliverySystem[x][y].passwd, "");
+	strcpy(deliverySystem[x][y].context, "");
+
 }
 
 //get password input and check if it is correct for the cell (x,y)
@@ -62,7 +66,7 @@ static void initStorage(int x, int y) {
 static int inputPasswd(int x, int y) {
 	
 	int result;
-	char input_password[4];	//password that user inputted
+	char input_password[PASSWD_LEN+1];	//password that user inputted
 	
 	printf("-input the password of storage (%i, %i): ", x, y);
 	scanf("%4s", &input_password);
@@ -99,14 +103,14 @@ int str_backupSystem(char* filepath) {
 	FILE *fp;
 
 	fp = fopen(filepath, "w");
-
+		
 	fprintf(fp,"%d %d %s\n",systemSize[0],systemSize[1], masterPassword);
 	
 	for(i=0;i<systemSize[0];i++)
 	{
 		for(j=0;j<systemSize[1];j++)
 		{
-			if(deliverySystem[i][j].cnt == 1)
+			if(deliverySystem[i][j].cnt != 0)
 			{
 				fprintf(fp,"%d %d ", i, j);
 				fprintf(fp, "%d %d ", deliverySystem[i][j].building, deliverySystem[i][j].room );
@@ -117,12 +121,12 @@ int str_backupSystem(char* filepath) {
 	
 	}
 	
-	if(fp == NULL)
-		return -1;
-	
 	fclose(fp);
 	
 	return 0;
+	
+	if(fp == NULL)
+		return -1;
 }
 
 
@@ -146,7 +150,7 @@ int str_createSystem(char* filepath) {
 	deliverySystem = (storage_t **)malloc(systemSize[0] * sizeof(struct storage_t*));	//row
 	for(i=0;i<systemSize[0];i++)
 		deliverySystem[i] = (storage_t *)malloc(systemSize[1] * sizeof(storage_t));	//column
-	
+
 	//allocate memory to the context pointer
 	for(i=0;i<systemSize[0];i++)
 	{
@@ -156,8 +160,6 @@ int str_createSystem(char* filepath) {
 		}
 	}
 
-
-	
 	//cnt initializing
 	for(i=0;i<systemSize[0];i++)
 	{
@@ -170,14 +172,21 @@ int str_createSystem(char* filepath) {
 	//read past contexts of the delivery system
 	while((c = fgetc(fp)) != EOF)
 	{	
-		//row, column, building, room, passwd, context
+		//row, column, building, room, passwd, context, cnt
 		fscanf(fp, "%d %d", &x, &y);
 		fscanf(fp, "%d %d", &deliverySystem[x][y].building, &deliverySystem[x][y].room); 
 		fscanf(fp, " %s %s", deliverySystem[x][y].passwd, deliverySystem[x][y].context);
-		
 		deliverySystem[x][y].cnt = 1;
+		
+		#if 0
+		//allocate memory to the context pointer
+		char context_len[MAX_MSG_SIZE+1];	//length of context
+		strcpy(deliverySystem[x][y].context, context_len);
+		deliverySystem[x][y].context = (char *)malloc((strlen(context_len)+1) * sizeof(char));
+		#endif
 		storedCnt++;
 	}
+
 	
 	storedCnt--;
 	
@@ -269,7 +278,8 @@ int str_pushToStorage(int x, int y, int nBuilding, int nRoom, char msg[MAX_MSG_S
 		deliverySystem[x][y].cnt = 1;
 		strcpy(deliverySystem[x][y].passwd, passwd);
 		strcpy(deliverySystem[x][y].context, msg);
-		
+
+
 		storedCnt++;
 		
 		return 0;
@@ -296,13 +306,14 @@ int str_extractStorage(int x, int y) {
 	
 		printf(" -----------> extracting the storage (%d, %d)...", x, y);
 
+		storedCnt--;
+		
 		printStorageInside(x, y);	//put the message string on the screen
 		initStorage(x, y);	//re-initialize storage
 		
-		storedCnt--;
-		
 		free(deliverySystem[x][y].context);	//free the memory of context
-
+		
+		return 0;
 	}                 
 	
 	if(inputPasswd(x,y) != 0)	//wrong
