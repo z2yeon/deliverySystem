@@ -207,6 +207,7 @@ void str_freeSystem(void) {
 		free(deliverySystem[i]);		
 	free(deliverySystem);
 	
+	
 }
 
 
@@ -311,7 +312,11 @@ int str_extractStorage(int x, int y) {
 		printStorageInside(x, y);	//put the message string on the screen
 		initStorage(x, y);	//re-initialize storage
 		
-		free(deliverySystem[x][y].context);	//free the memory of context
+		//free the memory of context
+		int i;
+		for(i=0;i<systemSize[0];i++)
+			free(deliverySystem[i][y].context);
+		free(deliverySystem[x][y].context);	
 		
 		return 0;
 	}                 
